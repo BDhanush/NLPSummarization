@@ -4,11 +4,16 @@ import nltk
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from rouge import Rouge
+from belu import compute_belief
 
+nltk.download('punkt')
 nltk.download('stopwords')
-CSV_file = 'your_dataset.csv'
-df = pd.read_csv(CSV_file)
 
+# Step 1: Load the Dataset
+df = pd.read_csv('your_dataset.csv')
+
+# Step 2: Preprocess the Data
 def preprocess_text(text):
     text = re.sub(r'\W', ' ', text)  # Remove non-alphanumeric characters
     text = re.sub(r'\s+', ' ', text)  # Remove extra whitespaces
@@ -17,11 +22,11 @@ def preprocess_text(text):
 
 df['preprocessed_abstract'] = df['abstract'].apply(preprocess_text)
 
-# Feature Extraction (TF-IDF)
-vectorizer = TfidfVectorizer()
+# Step 3: Feature Extraction (TF-IDF)
+vectorizer = TfidfVectorizer(stop_words='english')
 tfidf_matrix = vectorizer.fit_transform(df['preprocessed_abstract'])
 
-# Sentence Scoring
+# Step 4: Sentence Scoring
 sentence_scores = []
 for i in range(len(df)):
     sentence_scores.append({})
@@ -36,7 +41,7 @@ for i in range(len(df)):
                 else:
                     sentence_scores[i][word] = tfidf_matrix[i, vectorizer.vocabulary_[word]]
 
-# Selecting Top Sentences
+# Step 5: Select Top Sentences
 summary_sentences = []
 for i in range(len(df)):
     top_sentences = sorted(sentence_scores[i], key=sentence_scores[i].get, reverse=True)[:3]  # Select top 3 sentences
@@ -45,13 +50,11 @@ for i in range(len(df)):
 
 df['summary'] = summary_sentences
 
-
-from rouge import Rouge
-from belu import compute_belief
-
+# Step 6: Evaluate Performance
 rouge = Rouge()
+scores = rouge.get_scores(df['summary'], df['title'])
 belu_score = compute_belief(df['summary'], df['title'])
 
 print("ROUGE Score:")
-print(rouge.get_scores(df['summary'], df['title']))
+print(scores)
 print("BELU Score:", belu_score)
